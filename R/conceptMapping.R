@@ -1,0 +1,177 @@
+#' Perform Concept Mapping Analysis
+#'
+#' This function conducts a concept mapping analysis on sorter data, producing a concept map
+#' based on one of three clustering methods: k-means, network analysis, or classical multidimensional scaling (CMDS).
+#'
+#' @param CMData A data frame containing concept mapping data.
+#'         It must include the columns:
+#'        \code{"sorterID"}, \code{"statement"}, and \code{"stackID"}.
+#' @param method A string specifying the clustering method to use. Options are:
+#'        \code{"kmeans"}, \cr \code{"network"}, or \code{"cmds"}. Default is \code{"network"}.
+#' @param numberOfClusters Either a character string (\code{"auto"}) to determine the optimal number of clusters
+#'        or an integer specifying the desired number of clusters. Default is \code{"auto"}.
+#' @param verbose Logical, if \code{TRUE}, additional information about the processing steps is printed to the console.
+#' @param rangeNumberOfClusters A vector of integers specifying the range of clusters to evaluate
+#'        when \cr \code{numberOfClusters = "auto"}. Default is \code{2:15}.
+#' @param graph Logical. If \code{TRUE}, visualizes clustering results, including heatmaps and cluster-specific plots.
+#'        Default is \code{FALSE}.
+#' @param numberOfKmeansRestarts An integer specifying the number of restarts for k-means clustering.
+#'        Only relevant if \code{method = "kmeans"}. Default is \code{100}.
+#' @param backgroundColor A string specifying the background color of network plots. Default is \code{"black"}.
+#' @param main A string specifying the title for plots. Default is \code{NULL}.
+#' @param ... Additional arguments, such as \code{resolution}, which may be passed to specific clustering methods.
+#'
+#' @return An object of class \code{conceptMap}, containing:
+#' \describe{
+#'   \item{\code{allStatements}}{A data frame with statement numbers and text.}
+#'   \item{\code{CMData}}{The original concept mapping data.}
+#'   \item{\code{method}}{The clustering method used.}
+#'   \item{\code{numberOfClusters}}{The number of clusters identified.}
+#'   \item{\code{clusterResults}}{A vector indicating cluster assignments for each statement.}
+#'   \item{\code{heatmapPlot}}{A heatmap visualizing co-occurrence patterns.}
+#'   \item{\code{silhouettePlot}}{(If applicable) A silhouette plot for \code{"kmeans"} or \code{"cmds"}.}
+#'   \item{\code{networkPlot}}{(If applicable) A network plot for \code{"network"}.}
+#'   \item{\code{cmdsPlot}}{(If applicable) A CMDS plot for \code{"cmds"}.}
+#' }
+#'
+#' @details
+#' The function supports three methods for clustering:
+#' \itemize{
+#'   \item \code{"kmeans"}: Uses k-means clustering with an optional silhouette-based determination of cluster count.
+#'   \item \code{"network"}: Generates a network plot using modularity-based clustering.
+#'   \item \code{"cmds"}: Applies classical multidimensional scaling (CMDS) and clusters the results.
+#' }
+#'
+#' Heatmaps are created for all methods, while additional visualizations depend on the chosen method and \code{graph} parameter.
+#'
+#' @examples
+#' # Simulate data with custom parameters:
+#' set.seed(1)
+#' myCMData <- simulateCardData(nSorters=40, pCorrect=.90, attributeWeights=c(1,1,1,1))
+#'
+#' # Subject the data to sorter cluster analysis
+#' myCMDataBySorters <- sorterMapping(myCMData)
+#'
+#' # Concept mapping on sorter cluster 3 using default "network" method
+#' myCMAnalysis3 <- conceptMapping(myCMDataBySorters[[3]])
+#'
+#' # Concept mapping using default network method using 3 clusters
+#' myCMAnalysis3b <- conceptMapping(myCMDataBySorters[[3]], numberOfCluster = 3)
+#'
+#' # Concept mapping using kmeans clustering and 3 clusters
+#' myCMAnalysis3c <- conceptMapping(myCMDataBySorters[[3]], method = "kmeans",
+#'   numberOfCluster = 3)
+#'
+#'
+#'
+#'
+#' @export
+conceptMapping <- function(CMData,
+                           method = "network",
+                           numberOfClusters = "auto",
+                           verbose = TRUE,
+                           rangeNumberOfClusters = 2:15,
+                           graph = FALSE,
+                           numberOfKmeansRestarts = 100,
+                           backgroundColor = "black",
+                           main = NULL, ...) {
+
+  #check if the data frame is suitable for concept mapping
+  if (!checkConceptMapData(CMData)) {
+    stop("Object CMdata is not suitable for concept mapping.")
+  }
+
+  if (!(method %in% c("kmeans", "network", "cmds"))) {
+    stop(sprintf("Invalid method '%s' chosen.\n", method))
+  }
+
+  #extract elipsis
+  args <- list(...)
+  if ("resolution" %in% names(args)) {
+    resolution <- args$resolution
+  } else {
+    resolution <- NULL
+  }
+
+  #add column StatementNumber for each unique statement
+  CMData$StatementNumber <- as.numeric(factor(CMData$statement, levels=unique(CMData$statement)))
+
+  #create overview of all statements
+  allStatements <- createStatementOverview(CMData)
+
+  #create co-occurence matrix for all statements
+  coOccurrenceMatrix <- createCoOccurrenceMatrix(CMData)
+
+  conceptMap <- NULL
+  #allocate memory for concept mapping results for each cluster k
+  conceptMap$clusterResults <- rep(NA, length=nrow(allStatements))
+
+  #Iterate over all clusters
+  if (verbose) {
+    cat(sprintf("Analyzing sorter cluster.\n"))
+    cat(sprintf("Using method '%s' with number of clusters set to: '%s'.\n", method, as.character(numberOfClusters)))
+  }
+
+  #we always create a heatmap for visualisation purposes
+  conceptMap$heatmapPlot <- createHeatmap(coOccurrenceMatrix, main)
+
+  #1. method = kmeans
+  if (method=="kmeans") {
+    if (numberOfClusters=="auto") {
+      silhouetteResults <- createSilhouettePlot(coOccurrenceMatrix,
+                                                rangeNumberOfClusters,
+                                                numberOfKmeansRestarts, main=main)
+      conceptMap$silhouettePlot <- silhouetteResults$silhouettePlot
+      conceptMap$numberOfClusters <- silhouetteResults$silhouetteNumberOfClusters
+      conceptMap$clusterResults <- silhouetteResults$silhouetteClusterResults
+    } else {
+      silhouetteResults <- createSilhouettePlot(coOccurrenceMatrix,
+                                                rangeNumberOfClusters,
+                                                numberOfKmeansRestarts, main=main,
+                                                forcedClusterNumber=numberOfClusters)
+      conceptMap$silhouettePlot <- silhouetteResults$silhouettePlot
+      conceptMap$numberOfClusters <- silhouetteResults$silhouetteNumberOfClusters
+      conceptMap$clusterResults <- silhouetteResults$silhouetteClusterResults
+    }
+
+    if (graph) {
+      plot(conceptMap$heatmapPlot$gtable)
+      print(conceptMap$silhouettePlot)
+    }
+  }
+
+  #2 method = network
+  if (method=="network") {
+    networkResults <- conceptMappingNetwork(coOccurrenceMatrix, numberOfClusters, main, verbose, backgroundColor, resolution)
+    conceptMap$networkPlot <- networkResults$networkPlot
+    conceptMap$numberOfClusters <- networkResults$networkNumberOfClusters
+    conceptMap$clusterResults <- networkResults$networkClusterResults
+
+    if (graph) {
+      plot(conceptMap$heatmapPlot$gtable)
+      print(conceptMap$networkPlot)
+    }
+  }
+
+  #3 method = cmds
+  if (method=="cmds") {
+    cmdsResults <- createCMDSPlot(coOccurrenceMatrix, numberOfClusters, main=main,
+                                  rangeNumberOfClusters, numberOfKmeansRestarts)
+    conceptMap$cmdsPlot <- cmdsResults$cmdsPlot
+    conceptMap$numberOfClusters <- cmdsResults$cmdsNumberOfClusters
+    conceptMap$clusterResults <- cmdsResults$cmdsClusterResults
+    conceptMap$silhouettePlot <- cmdsResults$cmdsSilhouettePlot
+
+    if (graph) {
+      print(conceptMap$silhouettePlot)
+      plot(conceptMap$heatmapPlot$gtable)
+      print(conceptMap$cmdsPlot)
+    }
+  }
+
+  conceptMap$allStatements <- allStatements
+  conceptMap$CMData <- CMData
+  conceptMap$method <- method
+  class(conceptMap) = "conceptMap"
+  return(conceptMap)
+}

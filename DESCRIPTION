@@ -1,0 +1,18 @@
+Package: cmAnalysis
+Title: Process and Visualise Concept Mapping Data
+Version: 1.0.0
+Authors@R: c(
+    person(given = "Jos", family = "Hageman", email = "jos.hageman@wur.nl", role = c("aut", "cre")),
+    person(given = "Jarl", family = "Kampen", email = "jarl.kampen@wur.nl", role = c("aut")))
+Author: Jos Hageman [aut, cre],
+  Jarl Kampen [aut]
+Maintainer: Jos Hageman <jos.hageman@wur.nl>
+Description: Processing and visualizing concept mapping data. Concept maps are versatile tools used across disciplines to enhance understanding, teaching, brainstorming, and information organization. The analysis of concept mapping data involves the sequential use of cluster analysis (for sorting participants and statements), multidimensional scaling (for positioning statements in a conceptual space), and visualization techniques, including point cluster maps and dendrograms.
+License: GPL-3
+Encoding: UTF-8
+RoxygenNote: 7.3.2
+Imports: cluster, ggplot2, factoextra, clue, igraph, stringr, pheatmap
+NeedsCompilation: no
+Packaged: 2025-03-11 14:44:40 UTC; hagem011
+Repository: CRAN
+Date/Publication: 2025-03-13 12:50:05 UTC
