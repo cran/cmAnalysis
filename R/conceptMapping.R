@@ -43,6 +43,9 @@
 #' }
 #'
 #' Heatmaps are created for all methods, while additional visualizations depend on the chosen method and \code{graph} parameter.
+#' 
+#' @references
+#' Kampen, J.K., Hageman, J.A., Breuer, M., & Tobi, H. (2025). The validity of concept mapping: let's call a spade a spade. Qual Quant. \doi{10.1007/s11135-025-02351-z}
 #'
 #' @examples
 #' # Simulate data with custom parameters:
@@ -61,9 +64,6 @@
 #' # Concept mapping using kmeans clustering and 3 clusters
 #' myCMAnalysis3c <- conceptMapping(myCMDataBySorters[[3]], method = "kmeans",
 #'   numberOfCluster = 3)
-#'
-#'
-#'
 #'
 #' @export
 conceptMapping <- function(CMData,

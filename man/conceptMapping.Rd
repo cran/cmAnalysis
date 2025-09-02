@@ -91,7 +91,7 @@ myCMAnalysis3b <- conceptMapping(myCMDataBySorters[[3]], numberOfCluster = 3)
 myCMAnalysis3c <- conceptMapping(myCMDataBySorters[[3]], method = "kmeans",
   numberOfCluster = 3)
 
-
-
-
+}
+\references{
+Kampen, J.K., Hageman, J.A., Breuer, M., & Tobi, H. (2025). The validity of concept mapping: let's call a spade a spade. Qual Quant. \doi{10.1007/s11135-025-02351-z}
 }
