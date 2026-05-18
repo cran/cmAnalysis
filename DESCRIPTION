@@ -1,6 +1,6 @@
 Package: cmAnalysis
 Title: Process and Visualise Concept Mapping Data
-Version: 1.0.1
+Version: 1.0.3
 Authors@R: c(
     person(given = "Jos", family = "Hageman", email = "jos.hageman@wur.nl", role = c("aut", "cre")),
     person(given = "Jarl", family = "Kampen", email = "jarl.kampen@wur.nl", role = c("aut")))
@@ -17,9 +17,9 @@ Description: Concept maps are versatile tools used across disciplines to enhance
   Qual Quant. <doi:10.1007/s11135-025-02351-z>.
 License: GPL-3
 Encoding: UTF-8
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Imports: cluster, ggplot2, factoextra, clue, igraph, stringr, pheatmap
 NeedsCompilation: no
-Packaged: 2025-09-02 10:03:43 UTC; josha
+Packaged: 2026-05-17 16:07:03 UTC; josha
 Repository: CRAN
-Date/Publication: 2025-09-02 12:30:02 UTC
+Date/Publication: 2026-05-18 20:40:08 UTC

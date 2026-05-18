@@ -54,9 +54,9 @@ checkConceptMapData <- function(CMData) {
     ))
   }
 
-  #Check if there are at least 2 unique stackIDs
-  if (length(unique(CMData$stackID)) < 2) {
-    stop("Object CMData must contain at least 2 unique stackID's.")
+  #Check if there are at least 2 unique stacks (sorterID, stackID combinations)
+  if (nrow(unique(CMData[, c("sorterID", "stackID")])) < 2) {
+    stop("Object CMData must contain at least 2 unique stacks.")
   }
 
   #Check if there are at least 2 unique sorterID's

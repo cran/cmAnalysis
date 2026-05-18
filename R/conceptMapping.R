@@ -99,6 +99,18 @@ conceptMapping <- function(CMData,
   #create overview of all statements
   allStatements <- createStatementOverview(CMData)
 
+  #adjust cluster range to the maximum supported by available statements
+  numberOfUniqueStatements <- length(unique(CMData$statement))
+  maxNumberOfClusters <- numberOfUniqueStatements - 1
+  adjustedRangeNumberOfClusters <- rangeNumberOfClusters[rangeNumberOfClusters <= maxNumberOfClusters]
+  if (!identical(adjustedRangeNumberOfClusters, rangeNumberOfClusters)) {
+    rangeNumberOfClusters <- adjustedRangeNumberOfClusters
+    if (verbose) {
+      cat(sprintf("Adjusted rangeNumberOfClusters to %s because there are %d unique statements (maximum clusters is %d).\n",
+        paste(rangeNumberOfClusters, collapse = ", "), numberOfUniqueStatements, maxNumberOfClusters ))
+    }
+  }
+
   #create co-occurence matrix for all statements
   coOccurrenceMatrix <- createCoOccurrenceMatrix(CMData)
 

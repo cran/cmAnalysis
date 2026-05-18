@@ -1,9 +1,9 @@
-7feb132b756b0e922da9b7f07f9fe824 *DESCRIPTION
+c8e7202b52b7b4486c01a86266a49a13 *DESCRIPTION
 c8aa84412f231f25a8180332446197ff *NAMESPACE
-a888c2481fb679ed4b3a9a7251561866 *NEWS.md
+73906c2657c39d6f0d97522964a0cdff *NEWS.md
 d6eecc93988aa84d0d0817086f78c421 *R/abbreviateStatements.R
-12d77f41916f0e592544d63619fddedf *R/checkConceptMapData.R
-60056adf541508e14fa6df72ccbc9acc *R/conceptMapping.R
+e4e0abc10fb3ea0bc962fa6c9ec678ed *R/checkConceptMapData.R
+2176e0fa412d5b54d268fd474a4fc268 *R/conceptMapping.R
 9c248a048b40e128da9219a2f3a4dcd0 *R/conceptMappingNetwork.R
 001a6f115c4f93867bd7834847a7e5e3 *R/createCMDSPlot.R
 6a5f569b095f00a7f640345f983b4419 *R/createCoOccurenceMatrix.R

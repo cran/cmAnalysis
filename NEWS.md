@@ -1,5 +1,13 @@
 # cmAnalysis News
 
+## cmAnalysis 1.0.3
+
+* Improved `conceptMapping()` so the cluster range now adjusts automatically to the number of statements, with a message when this happens.
+
+## cmAnalysis 1.0.2
+
+* Fixed bug in `checkConceptMapData()`: The validation now correctly counts unique (sorterID, stackID) combinations instead of just unique stackID values. This ensures that multiple sorters can each create their own stacks with the same stackID number.
+
 ## cmAnalysis 1.0.1
 
 * Added reference to the published paper:  
