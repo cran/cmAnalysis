@@ -41,9 +41,10 @@ weights for different card attributes.
 The function simulates a card sorting experiment where cards are
 sorted by multiple sorters based on one of four attributes. The probability
 of sorting a card correctly is determined by \code{pCorrect}, and errors are
-introduced randomly for each sorter. The attribute weights determine how many
-sorters focus on each attribute, and a warning is issued if the weights do
-not align with the total number of sorters.
+introduced randomly for each sorter by selecting a different category.
+Attribute weights determine how many sorters focus on each attribute.
+Whole-number allocations use the largest remainders to preserve the requested
+total; ties are resolved in attribute order.
 
 The function returns a data frame containing simulated card sorting data
 for all sorters, including sorter IDs, card IDs, and assigned stacks.

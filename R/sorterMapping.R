@@ -16,13 +16,18 @@
 #' @return A list of data frames, each representing the concept mapping data for a cluster of sorters.
 #'         If only one cluster is found, the original \code{CMData} is returned.
 #'
+#' When multiple groups are returned, each data frame has a \code{conceptMapValidation} attribute. Its value is
+#' \code{"passes_current_validator"} if validation succeeds, or the validation error message otherwise. 
+#' Groups are retained regardless of this status. Passing validation does not guarantee that every subsequent
+#' analysis is feasible. When one group is requested, the returned data frame has no such attribute.
+#' 
 #' @details
 #' This function clusters sorters based on their sorting behavior using hierarchical clustering
 #' with Ward's method. If \code{numberOfSorterClusters = "auto"}, the silhouette method is used
 #' to determine the optimal number of clusters within the range specified by \code{rangeNumberOfClusters}.
 #'
-#' Each cluster's data is validated for its suitability for concept mapping, and cluster-specific data
-#' is returned as a list of data frames. Graphical output includes a dendrogram and silhouette plot
+#' For multiple groups, validation status is recorded independently of \code{verbose}. The \code{verbose}
+#' argument controls console output only. Graphical output includes a dendrogram and silhouette plot
 #' if \code{graph = TRUE}.
 #'
 #' @examples
@@ -43,8 +48,12 @@ sorterMapping <- function(CMData,
                           rangeNumberOfClusters = 2:15,
                           graph = TRUE) {
 
-  oldPar <- graphics::par(no.readonly = TRUE)
-  on.exit(graphics::par(oldPar))
+  for (flag in c("graph", "verbose")) {
+    value <- get(flag)
+    if (!is.logical(value) || length(value) != 1 || is.na(value)) {
+      stop(sprintf("%s must be TRUE or FALSE.", flag))
+    }
+  }
 
   #check if the data frame is suitable for concept mapping
   if (!checkConceptMapData(CMData)) {
@@ -57,19 +66,31 @@ sorterMapping <- function(CMData,
   nStatements <- length(unique(sort(CMData$statement)))
 
   if (is.character(numberOfSorterClusters)) {
+    if (length(numberOfSorterClusters) != 1 || is.na(numberOfSorterClusters)) {
+      stop("numberOfSorterClusters must be 'auto' or one integer.")
+    }
     numberOfSorterClusters <- tolower(numberOfSorterClusters)
   }
 
-  #make sure that the 1 cluster solution will not be used
-  if (numberOfSorterClusters == "auto" & (1 %in% rangeNumberOfClusters)) {
-    if (verbose) {
-      cat(sprintf("Dropping cluster size of 1 in considered clusters."))
+  isAuto <- identical(numberOfSorterClusters, "auto")
+  whole <- function(x) is.numeric(x) && length(x) > 0 &&
+    all(is.finite(x)) && all(x == floor(x))
+  if (nSorters < 2) stop("Sorter clustering requires at least two sorters.")
+  if (isAuto) {
+    if (!whole(rangeNumberOfClusters)) stop("Cluster range must contain finite integers.")
+    requested <- sort(unique(rangeNumberOfClusters))
+    rangeNumberOfClusters <- requested[requested >= 2 & requested < nSorters]
+    if (!length(rangeNumberOfClusters)) {
+      stop("No automatic silhouette k: at least three sorters are required.")
     }
-    rangeNumberOfClusters <- setdiff(rangeNumberOfClusters, 1)
-  }
-
-  if (max(rangeNumberOfClusters) >= nSorters) {
-    stop("Number of sorter clusters should be less than the number of sorters.")
+    if (length(rangeNumberOfClusters) != length(requested)) {
+      warning("Infeasible sorter cluster candidates were omitted.", call. = FALSE)
+    }
+  } else {
+    if (!whole(numberOfSorterClusters) || length(numberOfSorterClusters) != 1 ||
+        numberOfSorterClusters < 1 || numberOfSorterClusters > nSorters) {
+      stop("Fixed sorter k must be one integer between 1 and nSorters.")
+    }
   }
 
   #add column StatementNumber for each unique statement
@@ -79,15 +100,22 @@ sorterMapping <- function(CMData,
 
   #collect the data from each individual user
   for (i in 1:nSorters) {
-    userSubset <- subset(CMData, CMData$sorterID == allSorters[i])
-
+    sorterRows <- which(CMData$sorterID == allSorters[i])
+    userSubset <- CMData[sorterRows, , drop = FALSE]
+    
     #this matrix stores per user which cards go together
     #create it again for each user
     tmp <- matrix(0, nrow=nStatements, ncol=nStatements)
 
     #now get each pile to see what is sorted together
-    for (j in unique(userSubset$stackID)) {
-      pileSubset <- subset(userSubset, userSubset$stackID == j)
+    #Unsorted items contribute no co-occurrences.
+    sorted <- !is.na(userSubset$stackID) &
+      nzchar(trimws(as.character(userSubset$stackID)))
+
+    for (j in unique(userSubset$stackID[sorted])) {
+      pileRows <- which(userSubset$stackID == j)
+      pileSubset <- userSubset[pileRows, , drop = FALSE]
+
       idx <- pileSubset$StatementNumber
       #setting it to 1 means they are grouped together
       tmp[idx, idx] <- 1
@@ -99,7 +127,18 @@ sorterMapping <- function(CMData,
   #first we cluster the data, to see how many groups there are
 
   #calculate pairwise distances between rows
-  theDistances <- stats::dist(rawData, method="euclidean")
+  theDistances <- stats::dist(rawData, method = "euclidean")
+
+  #Return one group when automatic clustering has no variation to analyse.
+  if (isAuto && all(theDistances == 0)) {
+    warning("All sorters have identical sorting profiles, returning one sorter cluster.", call. = FALSE)
+    return(CMData)
+  }
+
+  if (graph) {
+    oldPar <- graphics::par(no.readonly = TRUE)
+    on.exit(graphics::par(oldPar), add = TRUE)
+  }
 
   #Perform hierarchical clustering using Ward's method
   hc <- stats::hclust(theDistances, method="ward.D2")
@@ -114,7 +153,7 @@ sorterMapping <- function(CMData,
     optimalNumberofSorterClusters <- rangeNumberOfClusters[which.max(mySilhouetteWidth)]
     if (verbose) {
       cat(sprintf("Optimal number of sorter clusters based on Silhouette method: %d.\n",
-                optimalNumberofSorterClusters))
+                  optimalNumberofSorterClusters))
     }
 
     if (graph) {
@@ -145,9 +184,9 @@ sorterMapping <- function(CMData,
     if (graph) {
       #Plot the dendrogram for total (mixed) data
       plot(hc,labels=FALSE, main="Dendrogram",
-           xlab="Euclidean distance with Ward's Linkage", sub=NA)
+           xlab="Euclidean distance with Ward's Linkage", sub = NA)
       #visualize clusters
-      stats::rect.hclust(hc, k=optimalNumberofSorterClusters, border="red")
+      stats::rect.hclust(hc, k=optimalNumberofSorterClusters, border = "red")
     }
   }
 
@@ -163,19 +202,20 @@ sorterMapping <- function(CMData,
       if (verbose) {
         cat(sprintf("  Creating sorter cluster: %d\n", i))
       }
-      idx <- CMData$sorterID %in% allSorters[clusteredSorters==i]
+      idx <- CMData$sorterID %in% allSorters[clusteredSorters == i]
       sorterCMData[[i]] <- CMData[idx,]
 
-      if (verbose) {
-        cat(sprintf("    Number of sorters in this cluster: %d\n", numberOfSorters(sorterCMData[[i]])))
-        cat(sprintf("    Data validity: "))
+      group <- sorterCMData[[i]]
+      groupSize <- length(unique(group$sorterID))
+      mapStatus <- tryCatch({
+        checkConceptMapData(group)
+        "passes_current_validator"
+      }, error = function(e) conditionMessage(e))
+      attr(sorterCMData[[i]], "conceptMapValidation") <- mapStatus
 
-        #check resulting sorter data frame
-        if (checkConceptMapData(sorterCMData[[i]])) {
-          cat(sprintf("OK.\n"))
-        } else {
-          stop("Concept data not valid.")
-        }
+      if (verbose) {
+        cat(sprintf("    Number of sorters in this cluster: %d\n", groupSize))
+        cat(sprintf("    Concept-map validation: %s\n", mapStatus))
       }
     }
   } else {

@@ -41,7 +41,7 @@ createStatementOverview <- function(CMData) {
   statementOverview <- NULL
   for (i in 1:max(CMData$StatementNumber, na.rm=TRUE)) {
     idx <- which(CMData$StatementNumber == i)
-    statementOverview <- rbind(statementOverview, data.frame(StatementNumber=i, Statement=CMData[idx, "statement"][1]))
+    statementOverview <- rbind(statementOverview, data.frame(StatementNumber = i, Statement = CMData$statement[idx[1]]))
   }
 
   return(statementOverview)

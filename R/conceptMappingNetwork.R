@@ -7,7 +7,7 @@
 #' @param numberOfClusters The number of clusters to form, or "auto" to automatically determine the optimal resolution.
 #' @param main A string for the title of the plot.
 #' @param verbose Logical, if \code{TRUE}, additional information about the processing steps is printed to the console.
-#' @param backgroundColor The background color for the plot (default is "white").
+#' @param backgroundColor The background color for the plot, options are white or black (default is "white").
 #' @param resolution A resolution parameter for Leiden clustering (optional, defaults to `NULL`).
 #'
 #' @return A list with:
@@ -22,13 +22,19 @@ conceptMappingNetwork <- function(coOccurrenceMatrix,
                                   numberOfClusters,
                                   main,
                                   verbose = TRUE,
-                                  backgroundColor = "white",
+                                  backgroundColor = c("white", "black"),
                                   resolution = NULL) {
+
+  backgroundColor <- match.arg(backgroundColor)
 
   graphObject <- igraph::graph_from_adjacency_matrix(coOccurrenceMatrix, mode = "undirected",
                                                      weighted = TRUE, diag = FALSE)
 
-  if (numberOfClusters=="auto") {
+  if (igraph::ecount(graphObject) == 0) {
+    stop("No co-grouping connections found; network clustering is not possible.")
+  }
+
+  if (numberOfClusters == "auto") {
     if (is.null(resolution)) {
       resolution <- stats::quantile(igraph::strength(graphObject))[2] / (igraph::gorder(graphObject) - 1)
     }
@@ -37,12 +43,13 @@ conceptMappingNetwork <- function(coOccurrenceMatrix,
     if (verbose) {
       cat(sprintf("Opimizing resolution to get %d clusters in network...", numberOfClusters))
     }
-    mySeq <- seq(from=0.1, to=50, by=0.01)
+    maxResolution <- max(coOccurrenceMatrix[upper.tri(coOccurrenceMatrix)]) + 0.01
+    mySeq <- seq(from = 0.1, to = maxResolution, by = 0.01)
     numClusts <- numeric(length(mySeq))
 
     for (i in 1:length(mySeq)) {
       resolution <- mySeq[i]
-      clusterResult <- igraph::cluster_leiden(graphObject, resolution=resolution, n_iterations = 10)
+      clusterResult <- igraph::cluster_leiden(graphObject, resolution = resolution, n_iterations = 10)
       numClusts[i] <- length(unique(clusterResult$membership))
       if (numClusts[i] >= numberOfClusters) {
         if (verbose) {
@@ -57,8 +64,17 @@ conceptMappingNetwork <- function(coOccurrenceMatrix,
     cat(sprintf("Using Leiden algorithm with resolution: %.2f\n", resolution))
   }
 
-  #get estimate for clusters
-  clusterResult <- igraph::cluster_leiden(graphObject, resolution=resolution, n_iterations = 10)
+  #For fixed k, reuse the result evaluated in the resolution search.
+  if (numberOfClusters == "auto") {
+    clusterResult <- igraph::cluster_leiden(graphObject, resolution = resolution, n_iterations = 10)
+  } else {
+    actualNumberOfClusters <- length(unique(clusterResult$membership))
+
+    if (actualNumberOfClusters != numberOfClusters) {
+      warning(sprintf("Requested %d network clusters, but found %d at resolution %.2f.", numberOfClusters, actualNumberOfClusters, resolution), call. = FALSE)
+    }
+  }
+
   names(clusterResult$membership) <- clusterResult$names
 
   # Extract the edges and their weights for plotting
@@ -76,13 +92,13 @@ conceptMappingNetwork <- function(coOccurrenceMatrix,
   nodeCoords <- layoutDF[, c("x", "y")]
 
   # Initialize empty columns in the edgeList for from and to coordinates
-  edgeList$from_x <- NA
-  edgeList$from_y <- NA
-  edgeList$to_x <- NA
-  edgeList$to_y <- NA
+  edgeList$from_x <- rep(NA_real_, nrow(edgeList))
+  edgeList$from_y <- rep(NA_real_, nrow(edgeList))
+  edgeList$to_x <- rep(NA_real_, nrow(edgeList))
+  edgeList$to_y <- rep(NA_real_, nrow(edgeList))
 
   # Iteratively assign the 'from' and 'to' coordinates using a for loop and which function
-  for (i in 1:nrow(edgeList)) {
+  for (i in seq_len(nrow(edgeList))) {    
     # Find the index of the 'from' node in the layoutDF
     fromIndex <- which(nodeNames == edgeList$from[i])
     toIndex <- which(nodeNames == edgeList$to[i])
@@ -109,46 +125,41 @@ conceptMappingNetwork <- function(coOccurrenceMatrix,
     textColor <- "black"
   }
 
-  #Most different colors
-  distinctiveColors <- c(
-    "red",           #1
-    "blue",          #2
-    "green",         #3
-    "yellow",        #4
-    "purple",        #5
-    "orange",        #6
-    "cyan",          #7
-    "pink",          #8
-    "brown",         #9
-    "gray",          #10
-    "darkgreen",     #11
-    "lightblue",     #12
-    "gold",          #13
-    "violet",        #14
-    "darkgray"       #15
-  )
+  distinctiveColors <- c("red", "blue", "green", "yellow", "purple",
+                         "orange", "cyan", "pink", "brown", "gray",
+                         "darkgreen", "lightblue", "gold", "violet", "darkgray",
+                         "sienna", "navy", "turquoise", "maroon", "olivedrab",
+                         "coral", "beige", "deeppink", "steelblue", "chocolate")
+
+  membership <- clusterResult$membership
+  nColoursNeeded <- max(membership)
+
+  if (nColoursNeeded > length(distinctiveColors)) {
+    warning("More clusters than available colours; some colours are reused.", call. = FALSE)
+  }
+
+  nodeColours <- rep(distinctiveColors, length.out = nColoursNeeded)[membership]
 
   #the network plot
   theCMNetworkGraph <- ggplot2::ggplot() +
     ggplot2::geom_segment(data = edgeList, ggplot2::aes(x = .data$from_x, y = .data$from_y,
                                                         xend = .data$to_x, yend = .data$to_y,
-                                                        linewidth = .data$weight, color=.data$weight)) +
+                                                        linewidth = .data$weight, color = .data$weight)) +
     ggplot2::geom_point(data = layoutDF, ggplot2::aes(x = .data$x, y = .data$y), size = 5,
-                        color = distinctiveColors[clusterResult$membership]) +
+                        color = nodeColours) +
     ggplot2::geom_text(data = layoutDF, ggplot2::aes(x = .data$x, y = .data$y, label = .data$ID),
                        vjust = 1.5, size = 3, color=textColor) +
     ggplot2::theme_void() +
-    ggplot2::theme(plot.background = ggplot2::element_rect(fill = paperColor, colour=paperColor),
-                   panel.background = ggplot2::element_rect(fill = paperColor, colour=paperColor),
+    ggplot2::theme(plot.background = ggplot2::element_rect(fill = paperColor, colour = paperColor),
+                   panel.background = ggplot2::element_rect(fill = paperColor, colour = paperColor),
                    text = ggplot2::element_text(color = textColor),
                    legend.position = "none")
 
-  theCMNetworkGraph <- theCMNetworkGraph + ggplot2::labs(title=paste("Network plot", main))
+  theCMNetworkGraph <- theCMNetworkGraph + ggplot2::labs(title = paste("Network plot", main))
 
 
-  return(list(networkPlot=theCMNetworkGraph,
-              networkNumberOfClusters=length(unique(clusterResult$membership)),
-              networkClusterResults=clusterResult$membership,
-              resolution=resolution))
+  return(list(networkPlot = theCMNetworkGraph,
+              networkNumberOfClusters = length(unique(clusterResult$membership)),
+              networkClusterResults = clusterResult$membership,
+              resolution = resolution))
 }
-

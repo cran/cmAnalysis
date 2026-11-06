@@ -13,11 +13,15 @@
 #' \itemize{
 #'   \item Verifies that \code{CMData} is a data frame.
 #'   \item Ensures the presence of required columns: \code{"sorterID"}, \code{"statement"}, and \code{"stackID"}.
-#'   \item Confirms that there are at least 2 unique values in the \code{"stackID"} column.
-#'   \item Confirms that there are at least 2 unique values in the \code{"sorterID"} column.
+#'   \item Checks that sorter and statement identifiers are present and non-empty.
+#'   \item Allows missing or blank \code{stackID} values for unsorted items.
+#'   \item Confirms that there are at least two unique \code{sorterID}/\code{stackID} combinations, excluding unsorted items.
 #'   \item Confirms that there are at least 2 unique values in the \code{"statement"} column.
 #' }
 #'
+#' Unsorted items contribute no co-occurrences and do not count as stacks.
+#' A single sorter is allowed if the data meet the remaining requirements.
+#' 
 #' @examples
 #' # Example of valid data
 #' validData <- data.frame(
@@ -38,6 +42,7 @@
 #'
 #' @export
 checkConceptMapData <- function(CMData) {
+
   #Check if CMData is a data frame
   if (!is.data.frame(CMData)) {
     stop("Object CMData must be a data frame.")
@@ -54,14 +59,32 @@ checkConceptMapData <- function(CMData) {
     ))
   }
 
-  #Check if there are at least 2 unique stacks (sorterID, stackID combinations)
-  if (nrow(unique(CMData[, c("sorterID", "stackID")])) < 2) {
-    stop("Object CMData must contain at least 2 unique stacks.")
+  #Validate keys; missing stackID means unsorted and is allowed.
+  for (nm in requiredColumns) {
+    value <- CMData[[nm]]
+    simple <- is.factor(value) || is.character(value) ||
+      is.integer(value) || is.double(value)
+
+    if (!simple || !is.null(dim(value))) {
+      stop(sprintf("Column %s must contain simple text or numeric keys.", nm))
+    }
+
+    missing <- is.na(value) | !nzchar(trimws(as.character(value)))
+
+    if (nm != "stackID" && any(missing)) {
+      stop(sprintf("Column %s contains missing or empty keys.", nm))
+    }
+
+    if (is.numeric(value) && any(!is.finite(value) & !is.na(value))) {
+      stop(sprintf("Column %s contains non-finite keys.", nm))
+    }
   }
 
-  #Check if there are at least 2 unique sorterID's
-  if (length(unique(CMData$sorterID)) < 2) {
-    stop("Data must contain at least 2 unique users.")
+  #Only actual stacks count; unsorted items do not form a stack.
+  sorted <- !is.na(CMData$stackID) &
+    nzchar(trimws(as.character(CMData$stackID)))
+  if (nrow(unique(CMData[sorted, c("sorterID", "stackID")])) < 2) {
+    stop("Object CMData must contain at least 2 unique stacks.")
   }
 
   #Check if there are at least 2 unique statements

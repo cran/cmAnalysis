@@ -21,7 +21,7 @@ abbreviated statements.
 \description{
 This function processes the "statement" column of a data frame containing concept map data by converting each
 statement to lowercase, removing stopwords, and truncating the statement to a specified maximum length.
-It allows for the abbreviation of long statements while maintaining their core meaning by removing unnecessary words.
+It creates shorter labels for use in tables and plots.
 }
 \details{
 This function performs several preprocessing steps on the "statement" column:
@@ -29,9 +29,12 @@ This function performs several preprocessing steps on the "statement" column:
 \item Converts statements to lowercase.
 \item Removes punctuation and stopwords from the statements.
 \item Truncates statements to a specified maximum length.
-\item Removes any rows with empty statements after processing.
+\item Adds number prefixes to identical or empty abbreviations and issues a warning.
+\item Assigns the same abbreviation to every occurrence of an original statement.
 }
 
+Number prefixes may increase label length beyond max_length.
+Users should review abbreviated labels; text processing can remove meaningful words.
 Stopwords are predefined and include common English words (e.g., "the", "and", "is", "a", etc.) that do not contribute
 much meaning to the core idea of the statement.
 }

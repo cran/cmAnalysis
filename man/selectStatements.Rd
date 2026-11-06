@@ -14,21 +14,24 @@ selectStatements(CMData, significanceThreshold = 0.05, verbose = TRUE, ...)
 \item \code{stackID}: The identifier for the stack.
 }}
 
-\item{significanceThreshold}{A numeric value representing the significance threshold for the chi-squared test.
+\item{significanceThreshold}{One finite numeric value between 0 and 1, specifying the significance threshold for the chi-squared test.
 Statements with p-values less than this threshold are considered significant. Default is 0.05.}
 
 \item{verbose}{Logical, if \code{TRUE}, additional information about the processing steps is printed to the console.}
 
-\item{...}{Additional arguments to be passed to the chi-squared test (optional).}
+\item{...}{Additional arguments passed to \code{stats::chisq.test()}, such as \code{p} to specify expected probabilities or
+\code{simulate.p.value} to use Monte Carlo simulation.}
 }
 \value{
 A data frame with the same structure as the input, but with non-significant statements removed (if any).
 If all statements are significant, the original data frame is returned unchanged.
+Untestable statements are retained with a warning.
+The selectionDiagnostics attribute records each statement's test status, p-value and whether it was retained.
 }
 \description{
-This function selects statements from a concept map dataset based on their significance in terms of co-occurrence.
-It applies a chi-squared test on the co-occurrence matrix of the statements to identify those that are statistically significant
-(i.e., those that co-occur more frequently than would be expected by chance).
+This function selects statements whose co-occurrence counts differ significantly from the expected
+distribution in a chi-squared goodness-of-fit test. By default, the test compares the counts
+against a uniform distribution across the other statements.
 }
 \examples{
 # Simulate data with custom parameters:

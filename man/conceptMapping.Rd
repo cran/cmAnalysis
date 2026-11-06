@@ -12,7 +12,7 @@ conceptMapping(
   rangeNumberOfClusters = 2:15,
   graph = FALSE,
   numberOfKmeansRestarts = 100,
-  backgroundColor = "black",
+  backgroundColor = "white",
   main = NULL,
   ...
 )
@@ -36,10 +36,10 @@ when \cr \code{numberOfClusters = "auto"}. Default is \code{2:15}.}
 \item{graph}{Logical. If \code{TRUE}, visualizes clustering results, including heatmaps and cluster-specific plots.
 Default is \code{FALSE}.}
 
-\item{numberOfKmeansRestarts}{An integer specifying the number of restarts for k-means clustering.
-Only relevant if \code{method = "kmeans"}. Default is \code{100}.}
+\item{numberOfKmeansRestarts}{An integer specifying the number of restarts for k-means clustering. Used for
+both \code{method = "kmeans"} and \code{method = "cmds"}. Default is \code{100}.}
 
-\item{backgroundColor}{A string specifying the background color of network plots. Default is \code{"black"}.}
+\item{backgroundColor}{The background color of network plots. Either \code{"white"} or \code{"black"}. Default is \code{"white"}.}
 
 \item{main}{A string specifying the title for plots. Default is \code{NULL}.}
 
@@ -67,9 +67,15 @@ based on one of three clustering methods: k-means, network analysis, or classica
 The function supports three methods for clustering:
 \itemize{
 \item \code{"kmeans"}: Uses k-means clustering with an optional silhouette-based determination of cluster count.
-\item \code{"network"}: Generates a network plot using modularity-based clustering.
+\item \code{"network"}: Uses Leiden clustering with the Constant Potts Model (CPM).
 \item \code{"cmds"}: Applies classical multidimensional scaling (CMDS) and clusters the results.
 }
+
+For \code{method = "kmeans"} and \code{method = "cmds"}, a fixed \code{numberOfClusters} evaluates only the
+requested cluster count.  The silhouette plot therefore contains one point. With \code{numberOfClusters = "auto"},
+feasible candidates from \code{rangeNumberOfClusters} are compared.
+
+For network clustering, the requested number of clusters is not guaranteed. A warning is issued if the actual number differs.
 
 Heatmaps are created for all methods, while additional visualizations depend on the chosen method and \code{graph} parameter.
 }
@@ -85,11 +91,10 @@ myCMDataBySorters <- sorterMapping(myCMData)
 myCMAnalysis3 <- conceptMapping(myCMDataBySorters[[3]])
 
 # Concept mapping using default network method using 3 clusters
-myCMAnalysis3b <- conceptMapping(myCMDataBySorters[[3]], numberOfCluster = 3)
+myCMAnalysis3b <- conceptMapping(myCMDataBySorters[[3]], numberOfClusters = 3)
 
 # Concept mapping using kmeans clustering and 3 clusters
-myCMAnalysis3c <- conceptMapping(myCMDataBySorters[[3]], method = "kmeans",
-  numberOfCluster = 3)
+myCMAnalysis3c <- conceptMapping(myCMDataBySorters[[3]], method = "kmeans", numberOfClusters = 3)
 
 }
 \references{

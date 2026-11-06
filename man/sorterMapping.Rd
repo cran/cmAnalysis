@@ -29,6 +29,11 @@ when \cr \code{numberOfSorterClusters = "auto"}. Default is \code{2:15}.}
 \value{
 A list of data frames, each representing the concept mapping data for a cluster of sorters.
 If only one cluster is found, the original \code{CMData} is returned.
+
+When multiple groups are returned, each data frame has a \code{conceptMapValidation} attribute. Its value is
+\code{"passes_current_validator"} if validation succeeds, or the validation error message otherwise.
+Groups are retained regardless of this status. Passing validation does not guarantee that every subsequent
+analysis is feasible. When one group is requested, the returned data frame has no such attribute.
 }
 \description{
 This function performs clustering of sorters in concept mapping data
@@ -40,8 +45,8 @@ This function clusters sorters based on their sorting behavior using hierarchica
 with Ward's method. If \code{numberOfSorterClusters = "auto"}, the silhouette method is used
 to determine the optimal number of clusters within the range specified by \code{rangeNumberOfClusters}.
 
-Each cluster's data is validated for its suitability for concept mapping, and cluster-specific data
-is returned as a list of data frames. Graphical output includes a dendrogram and silhouette plot
+For multiple groups, validation status is recorded independently of \code{verbose}. The \code{verbose}
+argument controls console output only. Graphical output includes a dendrogram and silhouette plot
 if \code{graph = TRUE}.
 }
 \examples{

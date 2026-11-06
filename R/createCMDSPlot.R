@@ -25,37 +25,41 @@ createCMDSPlot <- function(coOccurrenceMatrix,
                            rangeNumberOfClusters = 2:15,
                            numberOfKmeansRestarts = 100) {
 
+  if (nrow(coOccurrenceMatrix) < 3) {
+    stop("CMDS clustering requires at least three statements.")
+  }
+
   #Calculate the distance matrix for cluster k
-  myDistance <- dist(coOccurrenceMatrix, method='euclidean')
+  myDistance <- dist(coOccurrenceMatrix, method = "euclidean")
   #Perform classical multidimensional scaling (MDS) in 2 dimensions
-  CMcmds <- cmdscale(myDistance, k=2)
+  CMcmds <- cmdscale(myDistance, k = 2)
 
   #kmeans op CMcmds voor CMDSClusterNumber
   #warning("CMDS based clustering of statements is suboptimal method.")
-  if (numberOfClusters=="auto") {
+  if (numberOfClusters == "auto") {
     numberOfClusters <- NULL
   }
 
   main <- paste("CMDS", main)
 
   mySilhouetteResults <- doSilhouette(CMcmds, rangeNumberOfClusters,
-                                      numberOfKmeansRestarts, main, forcedClusterNumber=numberOfClusters )
+                                      numberOfKmeansRestarts, main,
+                                      forcedClusterNumber = numberOfClusters)
 
-  cmdsKmeans <- suppressWarnings(stats::kmeans(CMcmds, nstart=numberOfKmeansRestarts,
-                                               iter.max=2000, centers=mySilhouetteResults$numberOfClusters))
+  cmdsKmeans <- list(data = as.data.frame(CMcmds),
+                     cluster = mySilhouetteResults$clusterResults)
 
   #Create a CMDS cluster plot for cluster k
   cmdsKMeansPlot <- factoextra::fviz_cluster(cmdsKmeans,
-                                             data=as.data.frame(CMcmds),
-                                             repel=TRUE,
-                                             xlab="MDS Dimension 1",
-                                             ylab="MDS Dimension 2") +
+                                             data = as.data.frame(CMcmds),
+                                             repel = TRUE,
+                                             xlab = "MDS Dimension 1",
+                                             ylab = "MDS Dimension 2") +
     ggplot2::theme_minimal() +
     ggplot2::ggtitle(paste("Point cluster map", main))
 
-  return(list(cmdsPlot=cmdsKMeansPlot,
-              cmdsSilhouettePlot=mySilhouetteResults$silhouettePlot,
-              cmdsNumberOfClusters=mySilhouetteResults$numberOfClusters,
-              cmdsClusterResults=mySilhouetteResults$clusterResults))
+  return(list(cmdsPlot = cmdsKMeansPlot,
+              cmdsSilhouettePlot = mySilhouetteResults$silhouettePlot,
+              cmdsNumberOfClusters = mySilhouetteResults$numberOfClusters,
+              cmdsClusterResults = mySilhouetteResults$clusterResults))
 }
-

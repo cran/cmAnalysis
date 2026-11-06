@@ -2,7 +2,7 @@
 #'
 #' This function processes the "statement" column of a data frame containing concept map data by converting each
 #' statement to lowercase, removing stopwords, and truncating the statement to a specified maximum length.
-#' It allows for the abbreviation of long statements while maintaining their core meaning by removing unnecessary words.
+#' It creates shorter labels for use in tables and plots.
 #'
 #' @param CMData A data frame containing concept map data. The data should have at least the following column:
 #'   - `statement`: The text of the statement to be abbreviated.
@@ -13,8 +13,11 @@
 #'   - Converts statements to lowercase.
 #'   - Removes punctuation and stopwords from the statements.
 #'   - Truncates statements to a specified maximum length.
-#'   - Removes any rows with empty statements after processing.
+#'   - Adds number prefixes to identical or empty abbreviations and issues a warning.
+#'   - Assigns the same abbreviation to every occurrence of an original statement.
 #'
+#' Number prefixes may increase label length beyond max_length.
+#' Users should review abbreviated labels; text processing can remove meaningful words.
 #' Stopwords are predefined and include common English words (e.g., "the", "and", "is", "a", etc.) that do not contribute
 #' much meaning to the core idea of the statement.
 #'
@@ -42,6 +45,11 @@
 #'
 #' @export
 abbreviateStatements <- function(CMData, max_length = 30) {
+
+  if (!is.numeric(max_length) || length(max_length) != 1 ||
+      !is.finite(max_length) || max_length < 1 || max_length != floor(max_length)) {
+    stop("max_length must be one positive integer.", call. = FALSE)
+  }
 
   # Step 1: Define the list of stopwords directly in the script
   stopwords <- structure(list(
@@ -77,14 +85,16 @@ abbreviateStatements <- function(CMData, max_length = 30) {
     "each", "few", "more", "most", "other", "some", "such", "no",
     "nor", "not", "only", "own", "same", "so", "than", "too", "very",
     "s", "t", "can", "will", "just", "don", "should", "now", "ever",
-    "used", "never", "told", "st", "nd", "rd", "th"), .Names = NULL)
+    "used", "never", "told", "st", "nd", "rd", "th"), names = NULL)
 
   # Step 2: Convert the stopwords into a regular expression pattern
   stopwords_pattern <- paste0("\\b(", paste(stopwords, collapse = "|"), ")\\b")
 
   # Step 3: Process the "statement" column of CMData
   # Step-by-step processing without pipes
-  CMData$oriStatement <- CMData$statement  # Keep the original statement as "oriStatement"
+  if (!"oriStatement" %in% names(CMData)) {
+    CMData$oriStatement <- CMData$statement # Keep the original statement as "oriStatement"
+  }
 
   # Convert the statement to lowercase
   CMData$statement <- stringr::str_to_lower(CMData$statement)
@@ -98,8 +108,30 @@ abbreviateStatements <- function(CMData, max_length = 30) {
   # Restrict the length to max_length characters
   CMData$statement <- substr(CMData$statement, 1, max_length)
 
-  # Remove rows with empty statements
-  CMData <- CMData[CMData$statement != "", ]
+  #Create one label per original statement, shared across all sorters.
+  labelMap <- unique(CMData[, c("oriStatement", "statement")])
+  labels <- labelMap$statement
+
+  duplicatedLabels <- duplicated(labels) | duplicated(labels, fromLast = TRUE)
+  needsPrefix <- duplicatedLabels | !nzchar(labels)
+
+  if (any(needsPrefix)) {
+    warning("Some abbreviated statements are identical or empty. Number prefixes were added; please review the labels.", call. = FALSE)
+
+    #Repeat if a generated label collides with another existing label.
+    repeat {
+      labels[needsPrefix] <- paste(seq_along(labels)[needsPrefix], labels[needsPrefix])
+      labels <- trimws(labels)
+      needsPrefix <- duplicated(labels) | duplicated(labels, fromLast = TRUE)
+
+      if (!any(needsPrefix)) {
+        break
+      }
+    }
+  }
+
+  CMData$statement <- labels[match(CMData$oriStatement, labelMap$oriStatement)]
+
   # Step 4: Return the modified dataframe
   return(CMData)
 }

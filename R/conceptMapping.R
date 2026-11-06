@@ -15,9 +15,9 @@
 #'        when \cr \code{numberOfClusters = "auto"}. Default is \code{2:15}.
 #' @param graph Logical. If \code{TRUE}, visualizes clustering results, including heatmaps and cluster-specific plots.
 #'        Default is \code{FALSE}.
-#' @param numberOfKmeansRestarts An integer specifying the number of restarts for k-means clustering.
-#'        Only relevant if \code{method = "kmeans"}. Default is \code{100}.
-#' @param backgroundColor A string specifying the background color of network plots. Default is \code{"black"}.
+#' @param numberOfKmeansRestarts An integer specifying the number of restarts for k-means clustering. Used for
+#'        both \code{method = "kmeans"} and \code{method = "cmds"}. Default is \code{100}.
+#' @param backgroundColor The background color of network plots. Either \code{"white"} or \code{"black"}. Default is \code{"white"}.
 #' @param main A string specifying the title for plots. Default is \code{NULL}.
 #' @param ... Additional arguments, such as \code{resolution}, which may be passed to specific clustering methods.
 #'
@@ -38,10 +38,16 @@
 #' The function supports three methods for clustering:
 #' \itemize{
 #'   \item \code{"kmeans"}: Uses k-means clustering with an optional silhouette-based determination of cluster count.
-#'   \item \code{"network"}: Generates a network plot using modularity-based clustering.
+#'   \item \code{"network"}: Uses Leiden clustering with the Constant Potts Model (CPM).
 #'   \item \code{"cmds"}: Applies classical multidimensional scaling (CMDS) and clusters the results.
 #' }
 #'
+#' For \code{method = "kmeans"} and \code{method = "cmds"}, a fixed \code{numberOfClusters} evaluates only the
+#' requested cluster count.  The silhouette plot therefore contains one point. With \code{numberOfClusters = "auto"},
+#' feasible candidates from \code{rangeNumberOfClusters} are compared.
+#'
+#' For network clustering, the requested number of clusters is not guaranteed. A warning is issued if the actual number differs.
+#' 
 #' Heatmaps are created for all methods, while additional visualizations depend on the chosen method and \code{graph} parameter.
 #' 
 #' @references
@@ -59,11 +65,10 @@
 #' myCMAnalysis3 <- conceptMapping(myCMDataBySorters[[3]])
 #'
 #' # Concept mapping using default network method using 3 clusters
-#' myCMAnalysis3b <- conceptMapping(myCMDataBySorters[[3]], numberOfCluster = 3)
+#' myCMAnalysis3b <- conceptMapping(myCMDataBySorters[[3]], numberOfClusters = 3)
 #'
 #' # Concept mapping using kmeans clustering and 3 clusters
-#' myCMAnalysis3c <- conceptMapping(myCMDataBySorters[[3]], method = "kmeans",
-#'   numberOfCluster = 3)
+#' myCMAnalysis3c <- conceptMapping(myCMDataBySorters[[3]], method = "kmeans", numberOfClusters = 3)
 #'
 #' @export
 conceptMapping <- function(CMData,
@@ -73,7 +78,7 @@ conceptMapping <- function(CMData,
                            rangeNumberOfClusters = 2:15,
                            graph = FALSE,
                            numberOfKmeansRestarts = 100,
-                           backgroundColor = "black",
+                           backgroundColor = "white",
                            main = NULL, ...) {
 
   #check if the data frame is suitable for concept mapping
@@ -101,6 +106,24 @@ conceptMapping <- function(CMData,
 
   #adjust cluster range to the maximum supported by available statements
   numberOfUniqueStatements <- length(unique(CMData$statement))
+
+  if (method == "network") {
+    if (!identical(numberOfClusters, "auto")) {
+      if (!is.numeric(numberOfClusters) || length(numberOfClusters) != 1 ||
+          !is.finite(numberOfClusters) || numberOfClusters != floor(numberOfClusters) ||
+          numberOfClusters < 1 || numberOfClusters > numberOfUniqueStatements) {
+        stop("numberOfClusters must be 'auto' or one integer between 1 and the number of statements.", call. = FALSE)
+      }
+    }
+
+    if (!is.null(resolution)) {
+      if (!is.numeric(resolution) || length(resolution) != 1 ||
+          !is.finite(resolution) || resolution < 0) {
+        stop("resolution must be one finite non-negative number.", call. = FALSE)
+      }
+    }
+  }
+
   maxNumberOfClusters <- numberOfUniqueStatements - 1
   adjustedRangeNumberOfClusters <- rangeNumberOfClusters[rangeNumberOfClusters <= maxNumberOfClusters]
   if (!identical(adjustedRangeNumberOfClusters, rangeNumberOfClusters)) {

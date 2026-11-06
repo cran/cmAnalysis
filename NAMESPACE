@@ -8,6 +8,7 @@ export(checkConceptMapData)
 export(conceptMapping)
 export(createStatementOverview)
 export(crossClusterMap)
+export(getSorterClusterMembership)
 export(numberOfSorters)
 export(numberOfStatements)
 export(printSorters)
@@ -18,31 +19,40 @@ import(clue)
 import(ggplot2)
 importFrom(cluster,silhouette)
 importFrom(factoextra,fviz_cluster)
-importFrom(ggplot2,aes)
-importFrom(ggplot2,annotate)
-importFrom(ggplot2,element_rect)
-importFrom(ggplot2,element_text)
-importFrom(ggplot2,geom_line)
-importFrom(ggplot2,geom_point)
-importFrom(ggplot2,geom_segment)
-importFrom(ggplot2,geom_text)
-importFrom(ggplot2,ggplot)
-importFrom(ggplot2,ggtitle)
-importFrom(ggplot2,labs)
-importFrom(ggplot2,theme_minimal)
-importFrom(ggplot2,theme_void)
-importFrom(igraph,V)
-importFrom(igraph,as_data_frame)
-importFrom(igraph,cluster_leiden)
-importFrom(igraph,gorder)
-importFrom(igraph,graph_from_adjacency_matrix)
-importFrom(igraph,layout_with_fr)
-importFrom(igraph,strength)
+importFrom(ggplot2,
+  aes,
+  annotate,
+  element_rect,
+  element_text,
+  geom_line,
+  geom_point,
+  geom_segment,
+  geom_text,
+  ggplot,
+  ggtitle,
+  labs,
+  theme_minimal,
+  theme_void
+)
+importFrom(igraph,
+  V,
+  as_data_frame,
+  cluster_leiden,
+  gorder,
+  graph_from_adjacency_matrix,
+  layout_with_fr,
+  strength
+)
 importFrom(pheatmap,pheatmap)
-importFrom(stats,chisq.test)
-importFrom(stats,cmdscale)
-importFrom(stats,dist)
-importFrom(stringr,str_remove_all)
-importFrom(stringr,str_replace_all)
-importFrom(stringr,str_squish)
-importFrom(stringr,str_to_lower)
+importFrom(rlang,.data)
+importFrom(stats,
+  chisq.test,
+  cmdscale,
+  dist
+)
+importFrom(stringr,
+  str_remove_all,
+  str_replace_all,
+  str_squish,
+  str_to_lower
+)

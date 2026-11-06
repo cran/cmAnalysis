@@ -22,10 +22,19 @@ createHeatmap <- function(coOccurrenceMatrix, main) {
     }
   }
 
+  #Use explicit colour breaks when all co-occurrence counts are equal.
+  colourBreaks <- NA
+  valueRange <- range(coOccurrenceMatrix)
+
+  if (valueRange[1] == valueRange[2]) {
+    colourBreaks <- seq(from = 0, to = max(1, valueRange[2]), length.out = 51)
+  }
+
   #create heatmap with row and column clustering
   pheatmapPlot <- pheatmap::pheatmap(
     coOccurrenceMatrix,
     color = grDevices::colorRampPalette(c("white", "red"))(50),
+    breaks = colourBreaks,
     clustering_distance_rows = "euclidean",
     clustering_distance_cols = "euclidean",
     clustering_method = "complete",

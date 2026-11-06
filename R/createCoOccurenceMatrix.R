@@ -26,15 +26,21 @@ createCoOccurrenceMatrix <- function(CMData) {
 
   #collect the data from each sorter
   for (i in 1:nSorters) {
-    userSubset <- subset(CMData, CMData$sorterID == allSorters[i])
+    sorterRows <- which(CMData$sorterID == allSorters[i])
+    userSubset <- CMData[sorterRows, , drop = FALSE]
 
     #this matrix stores per sorter which statements go together
     #it is created for each sorter again
     tmp <- matrix(0, nrow=nStatements, ncol=nStatements)
 
     #now get each pile to see what is sorted together
-    for (j in unique(userSubset$stackID)) {
-      pileSubset <- subset(userSubset, userSubset$stackID == j)
+    sorted <- !is.na(userSubset$stackID) &
+      nzchar(trimws(as.character(userSubset$stackID)))
+
+    for (j in unique(userSubset$stackID[sorted])) {
+      pileRows <- which(userSubset$stackID == j)
+      pileSubset <- userSubset[pileRows, , drop = FALSE]
+      
       idx <- pileSubset$StatementNumber
       #setting it to 1 means they are grouped together
       tmp[idx, idx] <- 1
